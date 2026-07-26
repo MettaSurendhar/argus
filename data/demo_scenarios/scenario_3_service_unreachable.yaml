@@ -1,0 +1,57 @@
+# Scenario 3: Downstream service unreachable
+# Apply with: kubectl apply -f scenario_3_service_unreachable.yaml
+# The backend is scaled to 0 replicas, so the frontend's calls to it will fail/time out.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-backend
+  namespace: default
+  labels:
+    argus-scenario: "3-service-unreachable"
+spec:
+  replicas: 0  # <-- the actual fault: scaled to zero, no pods behind the Service
+  selector:
+    matchLabels:
+      app: my-backend
+  template:
+    metadata:
+      labels:
+        app: my-backend
+    spec:
+      containers:
+        - name: backend
+          image: hashicorp/http-echo:latest
+          args: ["-text=hello from backend", "-listen=:5678"]
+          ports:
+            - containerPort: 5678
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-backend-svc
+  namespace: default
+spec:
+  selector:
+    app: my-backend
+  ports:
+    - port: 80
+      targetPort: 5678
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-frontend-pod
+  namespace: default
+  labels:
+    argus-scenario: "3-service-unreachable"
+spec:
+  containers:
+    - name: frontend
+      image: curlimages/curl:latest
+      command: ["sh", "-c"]
+      args:
+        - |
+          while true; do
+            curl -m 3 -sv http://my-backend-svc/ || echo "connection to backend failed";
+            sleep 5;
+          done

@@ -1,0 +1,14 @@
+# Scenario 2: ImagePullBackOff
+# Apply with: kubectl apply -f scenario_2_imagepull.yaml
+# References a deliberately nonexistent image tag.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-badtag-pod
+  namespace: default
+  labels:
+    argus-scenario: "2-imagepull"
+spec:
+  containers:
+    - name: bad-image
+      image: nginx:v99-does-not-exist

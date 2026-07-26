@@ -1,0 +1,25 @@
+# Scenario 1: OOMKilled / CrashLoopBackOff
+# Apply with: kubectl apply -f scenario_1_oom.yaml
+# The container tries to allocate more memory than its limit allows, triggering OOMKilled.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-oom-pod
+  namespace: default
+  labels:
+    argus-scenario: "1-oom"
+spec:
+  containers:
+    - name: memory-hog
+      image: python:3.11-slim
+      command: ["python3", "-c"]
+      args:
+        - |
+          data = []
+          while True:
+              data.append(bytearray(10 * 1024 * 1024))  # grow ~10MB at a time
+      resources:
+        limits:
+          memory: "50Mi"
+        requests:
+          memory: "20Mi"
