@@ -121,3 +121,24 @@ Re-running is cheap once minikube/SigNoz/the Docker image are already up —
 `setup.sh` skips straight to Step 4.
 
 **Status:** ⏳ pending confirmation.
+
+---
+
+## 4. HF Hub unauthenticated rate-limit warning at Step 4/5
+
+**Symptom:**
+```
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+```
+
+**Cause:** `sentence-transformers` downloads the embedding model from
+Hugging Face Hub anonymously by default. Not fatal on its own, but slower
+and can hit rate limits.
+
+**Fix:** Added `HF_TOKEN=` to `.env.example` (get a free token at
+https://huggingface.co/settings/tokens, read access is enough). Docker
+passes `.env` straight into the container's environment, and
+`huggingface_hub` picks up `HF_TOKEN` automatically — no code changes
+needed.
+
+**Status:** ✅ resolved.
