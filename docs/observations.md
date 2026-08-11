@@ -51,5 +51,48 @@ If Docker Desktop is also installed on the Windows side, turn off its WSL
 integration for this distro (Settings → Resources → WSL Integration) so it
 doesn't conflict with the native install.
 
-**Status:** ⏳ pending confirmation — re-run `./setup.sh` after install and
-update this entry with the result.
+**Status:** ✅ resolved — native Docker Engine install fixed this.
+
+---
+
+## 2. WSL2 distro terminates silently mid-`docker build` (Step 3/5)
+
+**Environment:** WSL2 (Ubuntu 22.04), project on `/mnt/d/MettaProjects/argus-test`
+
+**Symptom:** `setup.sh` was mid-way through Step 3/5 (building the agent's
+Docker image) — `docker build` completed all 9 steps and finished
+"exporting to image" — then the terminal jumped straight to a **Windows
+PowerShell prompt** (`PS D:\>`) with no error, no Step 4/5 header, no exit
+code. The whole WSL2 distro terminated, not just the script.
+
+**Cause:** The project directory is on `/mnt/d/` — a Windows NTFS drive
+mounted into WSL2 via the 9p protocol, not WSL2's native Linux filesystem.
+File I/O across that boundary is drastically slower than native disk,
+which shows up directly in the log timings: `pip install` took **890.9s**
+(~15 min) and layer export took **213.8s** — both abnormal. Under that much
+sustained I/O pressure plus Docker's memory use during the build, the
+WSL2 VM hit a resource ceiling and was killed/reset by Windows.
+
+**Fix:**
+1. Move the project onto WSL2's native filesystem instead of `/mnt/d/`:
+   ```bash
+   mkdir -p ~/projects
+   cp -r /mnt/d/MettaProjects/argus-test ~/projects/argus
+   cd ~/projects/argus
+   ```
+2. Give WSL2 more headroom — create `C:\Users\<you>\.wslconfig` (from
+   Windows) with:
+   ```ini
+   [wsl2]
+   memory=6GB
+   processors=4
+   ```
+   then `wsl --shutdown` from PowerShell and reopen.
+3. Clean up any half-started state before retrying:
+   ```bash
+   docker ps -a
+   minikube status   # minikube delete if it's left over from the crashed run
+   ```
+
+**Status:** ⏳ pending confirmation — re-run `./setup.sh` from the native
+filesystem path and update this entry with the result.
