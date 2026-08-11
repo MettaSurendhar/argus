@@ -6,7 +6,11 @@ the full blow-by-blow of how each of these was actually diagnosed, see
 
 ---
 
-### `minikube` fails with `PROVIDER_DOCKER_VERSION_EXIT_1` / `docker version --format <no value>...`
+### 1. `minikube` fails with `PROVIDER_DOCKER_VERSION_EXIT_1` / `docker version --format <no value>...`
+
+**Screenshot:**
+
+![screenshots/observation-1.png](screenshots/observation-1.png)
 
 Docker isn't actually reachable. Check what's really going on:
 
@@ -31,7 +35,11 @@ systemctl status docker
 - **Nothing installed at all** → follow [`docs/setup.md`](setup.md#1-docker-engine)'s
   fresh install steps.
 
-### WSL2 terminates entirely mid-`docker build` (jumps back to a Windows/PowerShell prompt)
+### 2. WSL2 terminates entirely mid-`docker build` (jumps back to a Windows/PowerShell prompt)
+
+**Screenshot:**
+
+![screenshots/observation-2.png](screenshots/observation-2.png)
 
 **You're running the project from `/mnt/c/...` or `/mnt/d/...`** — a
 Windows drive mounted into WSL2. File I/O across that boundary is
@@ -41,16 +49,22 @@ can push the WSL2 VM over a resource ceiling and get it killed by Windows
 — with no error message, just a dead session.
 
 **Fix — move the project onto WSL2's native filesystem:**
+
 ```bash
 mkdir -p ~/projects
 cp -r /mnt/d/path/to/argus ~/projects/argus
 cd ~/projects/argus
 ```
+
 `setup.sh` itself will warn you at startup if it detects this before you
 even hit the build step. Also worth giving WSL2 more headroom via
 `.wslconfig` — see [`docs/setup.md`](setup.md#0-windows-only--wsl2).
 
-### Step 4/5 fails: `docker: --env-file: open .env: no such file or directory`
+### 3. Step 4/5 fails: `docker: --env-file: open .env: no such file or directory`
+
+**Screenshot:**
+
+![screenshots/observation-3.png](screenshots/observation-3.png)
 
 No `.env` in the project root — `docker build` doesn't need one, so a
 missing `.env` doesn't surface until Step 4, the first step that actually
@@ -61,20 +75,27 @@ cp .env.example .env
 # fill in GROQ_API_KEY (or OPENROUTER_API_KEY)
 ./setup.sh
 ```
+
 Re-running is cheap once minikube/SigNoz/the Docker image are already up
 — it skips straight to Step 4.
 
-### `Warning: You are sending unauthenticated requests to the HF Hub...`
+### 4. `Warning: You are sending unauthenticated requests to the HF Hub...`
+
+**Screenshot:**
+
+![screenshots/observation-4.png](screenshots/observation-4.png)
 
 Harmless — `sentence-transformers` is downloading the embedding model
 anonymously, which is slower and can hit rate limits but isn't fatal. Add
 a free token to speed it up:
+
 ```dotenv
 HF_TOKEN=hf_xxxxxxxxxxxx
 ```
+
 Get one at https://huggingface.co/settings/tokens (read access is enough).
 
-### Traces don't show up in SigNoz right after the very first run
+### 5. Traces don't show up in SigNoz right after the very first run
 
 Likely just a cold-start propagation delay — SigNoz's ClickHouse schema
 was created moments earlier by `foundryctl cast`, and newly-seen-service

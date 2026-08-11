@@ -10,12 +10,13 @@ need. For a quick summary instead of this full walkthrough, see the
 - [2. minikube + kubectl](#2-minikube--kubectl)
 - [3. foundryctl](#3-foundryctl)
 - [4. Get the repo running](#4-get-the-repo-running)
-- [5. Screenshots](#5-screenshots)
+- [5. Screenshots](#5-screenshots-of-setupsh-execution)
+- [Stopping and cleaning up](#stopping-and-cleaning-up)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## 0. Windows only — WSL2
+## 0. Windows only — WSL2 :
 
 SigNoz's ClickHouse Keeper segfaults under Docker Desktop's virtualization
 layer on Windows. This project needs **native Docker Engine running inside
@@ -54,7 +55,7 @@ WSL2**, not Docker Desktop. macOS/Linux users: skip to step 1.
 See also [Installing SigNoz on Windows: the Fastest Way](https://medium.com/@mettasurendhar/installing-signoz-on-windows-the-fastest-way-5-minutes-no-docker-desktop-eb7c581ff246)
 for the condensed version of this exact path.
 
-## 1. Docker Engine
+## 1. Docker Engine :
 
 ### If Docker is already installed
 
@@ -123,9 +124,10 @@ membership doesn't apply to your already-open shell.
 ```bash
 docker run hello-world
 ```
+
 If this prints the "Hello from Docker!" message, you're ready for step 2.
 
-## 2. minikube + kubectl
+## 2. minikube + kubectl :
 
 ```bash
 # minikube
@@ -148,7 +150,7 @@ the cluster itself. If you want to sanity-check this step in isolation
 first: `minikube start --driver=docker`, then `minikube delete` when done
 so `setup.sh` starts clean.
 
-## 3. foundryctl
+## 3. foundryctl :
 
 Deploys SigNoz.
 
@@ -159,7 +161,7 @@ curl -fsSL https://signoz.io/foundry.sh | bash
 Full docs / manual install (e.g. air-gapped environments):
 https://github.com/SigNoz/foundry/blob/main/docs/getting-started.md
 
-## 4. Get the repo running
+## 4. Get the repo running :
 
 ```bash
 git clone <your-repo-url> argus
@@ -169,35 +171,61 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-**Windows/WSL2:** run this from inside your WSL2 Ubuntu shell, in a
+**Windows/WSL2** run this from inside your WSL2 Ubuntu shell, in a
 directory under your Linux home (e.g. `~/projects/argus`) — not `/mnt/c/`
 or `/mnt/d/`. See step 0 above for why.
 
-`setup.sh` starts (or reuses) a minikube cluster, deploys SigNoz via
-Foundry, builds the agent's Docker image, builds the RAG index, then
-injects each of the 3 demo scenarios and runs the agent against them in
-sequence — printing what it's doing at every step. It runs minikube and
-Foundry directly on the host rather than through a container's mounted
-docker socket; see the script's own header comment for why.
+> Note:
+> `setup.sh` starts (or reuses) a minikube cluster, deploys SigNoz via Foundry, builds the agent's Docker image, builds the RAG index, then injects each of the 3 demo scenarios and runs the agent against them in sequence — printing what it's doing at every step. It runs minikube and Foundry directly on the host rather than through a container's mounted docker socket; see the script's own header comment for why.
+>
+> If you'd rather run things by hand instead of the full sequence (re-run a single scenario, work outside Docker, poke at an intermediate step), see the README's ["Running things by hand"](../README.md#running-things-by-hand) section.
 
-If you'd rather run things by hand instead of the full sequence (re-run a
-single scenario, work outside Docker, poke at an intermediate step), see
-the README's ["Running things by hand"](../README.md#running-things-by-hand)
-section.
+## 5. Screenshots of setupsh execution:
 
-## 5. Screenshots
+![screenshots/setup-1.png](screenshots/setup-1.png)
+![screenshots/setup-2.png](screenshots/setup-2.png)
+![screenshots/setup-3.png](screenshots/setup-3.png)
+![screenshots/setup-4.png](screenshots/setup-4.png)
+![screenshots/setup-5.png](screenshots/setup-5.png)
+![screenshots/setup-6.png](screenshots/setup-6.png)
+![screenshots/setup-7.png](screenshots/setup-7.png)
+![screenshots/setup-8.png](screenshots/setup-8.png)
 
-Once `setup.sh` finishes, open `http://localhost:8080` (SigNoz) and:
+## Stopping and cleaning up
 
-1. **Traces** tab → filter `service.name = argus` → open a `diagnose`
-   trace to see the nested spans.
-2. **Dashboards** → the Argus dashboard's 4 panels.
-3. **Alerts** → the 2 alert rules.
+### Quick check — what's actually running
 
-Save screenshots into `docs/screenshots/` using the exact filenames listed
-in [`docs/screenshots/README.md`](screenshots/README.md) — the main
-README already links to those filenames, so they'll appear there
-automatically once present, no other edits needed.
+```bash
+minikube status
+docker ps
+```
+
+### Pause everything (keeps all data, fast to resume)
+
+```bash
+minikube stop
+docker stop $(docker ps -q --filter "name=signoz-")
+```
+
+### Full teardown (frees all resources, next run starts clean)
+
+```bash
+# 1. Delete the minikube cluster entirely
+minikube delete
+
+# 2. Tear down the SigNoz stack (foundryctl has no "down" command — it only
+#    has gauge/forge/cast/gen — so use the compose file it generated)
+docker compose -f pours/deployment/compose.yaml down
+# add -v to also delete SigNoz's stored data (traces, dashboards, alerts):
+# docker compose -f pours/deployment/compose.yaml down -v
+```
+
+### Confirm it's actually stopped
+
+```bash
+docker ps -a       # should show no signoz-* or minikube containers running
+minikube status     # should report "Profile ... not found" or similar
+```
 
 ## Troubleshooting
 

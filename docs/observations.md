@@ -14,17 +14,22 @@ Each entry: what failed, what the actual cause was, how it was fixed.
 mounted into WSL)
 
 **Error:**
+
 ```
 Exiting due to PROVIDER_DOCKER_VERSION_EXIT_1: "docker version --format <no value>-<no value>:<no value>" exit status 1
 ```
+
+**Screenshot:**
+
+![screenshots/observation-1.png](screenshots/observation-1.png)
 
 **Cause:** Initial hypothesis (daemon not started / user not in `docker`
 group) was wrong. `groups $USER` already showed `docker`, and
 `systemctl status docker` returned `Unit docker.service could not be
 found` — meaning Docker Engine was **never installed** in this WSL distro
-at all. `docker version` / `docker ps` returning *"The command 'docker'
+at all. `docker version` / `docker ps` returning _"The command 'docker'
 could not be found... activate the WSL integration in Docker Desktop
-settings"* confirms it: what's present is only Docker Desktop's WSL
+settings"_ confirms it: what's present is only Docker Desktop's WSL
 integration stub, not a native Docker install. This is exactly the
 Docker Desktop path the README already steers away from (ClickHouse
 Keeper crash bug on Windows) — the fix is a native Docker Engine install
@@ -32,6 +37,7 @@ inside WSL2, not enabling Docker Desktop integration.
 
 **Fix:** Install Docker Engine natively via apt (official Docker repo, not
 the Desktop app):
+
 ```bash
 for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do
   sudo apt-get remove -y $pkg
@@ -47,6 +53,7 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 sudo systemctl enable --now docker
 docker run hello-world
 ```
+
 If Docker Desktop is also installed on the Windows side, turn off its WSL
 integration for this distro (Settings → Resources → WSL Integration) so it
 doesn't conflict with the native install.
@@ -56,6 +63,10 @@ doesn't conflict with the native install.
 ---
 
 ## 2. WSL2 distro terminates silently mid-`docker build` (Step 3/5)
+
+**Screenshot:**
+
+![screenshots/observation-2.png](screenshots/observation-2.png)
 
 **Environment:** WSL2 (Ubuntu 22.04), project on `/mnt/d/MettaProjects/argus-test`
 
@@ -74,6 +85,7 @@ sustained I/O pressure plus Docker's memory use during the build, the
 WSL2 VM hit a resource ceiling and was killed/reset by Windows.
 
 **Fix:**
+
 1. Move the project onto WSL2's native filesystem instead of `/mnt/d/`:
    ```bash
    mkdir -p ~/projects
@@ -101,6 +113,10 @@ filesystem path and update this entry with the result.
 
 ## 3. Step 4/5 fails: `docker: --env-file: open .env: no such file or directory`
 
+**Screenshot:**
+
+![screenshots/observation-3.png](screenshots/observation-3.png)
+
 **Environment:** WSL2, project moved to `~/projects/argus` (native
 filesystem, per issue #2's fix)
 
@@ -112,11 +128,13 @@ Step 4, the first step that actually runs `docker run --env-file .env
 in it — an easy step to skip when moving/re-cloning the project.
 
 **Fix:**
+
 ```bash
 cp .env.example .env
 # fill in GROQ_API_KEY (or OPENROUTER_API_KEY) in .env
 ./setup.sh
 ```
+
 Re-running is cheap once minikube/SigNoz/the Docker image are already up —
 `setup.sh` skips straight to Step 4.
 
@@ -126,7 +144,12 @@ Re-running is cheap once minikube/SigNoz/the Docker image are already up —
 
 ## 4. HF Hub unauthenticated rate-limit warning at Step 4/5
 
+**Screenshot:**
+
+![screenshots/observation-4.png](screenshots/observation-4.png)
+
 **Symptom:**
+
 ```
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 ```
@@ -148,17 +171,21 @@ needed.
 ## 5. Step 5/5 fails: MCP server can't read minikube certs inside container
 
 **Symptom:**
+
 ```
 Error: unable to create kubernetes target provider: failed to create kubernetes rest config from kubeconfig: invalid configuration: [unable to read client-cert /home/metta-unix/.minikube/profiles/minikube/client.crt for minikube due to open /home/metta-unix/.minikube/profiles/minikube/client.crt: no such file or directory, ...]
 ```
+
 followed by an `mcp.shared.exceptions.MCPError: Connection closed`.
 
 **Cause:** A real bug in `setup.sh`'s `run_agent()`, not a host/environment
 issue. It mounted:
+
 ```bash
 -v "$HOME/.kube:/root/.kube:ro" \
 -v "$HOME/.minikube:/root/.minikube:ro" \
 ```
+
 But minikube's generated kubeconfig references cert files by **absolute
 host path** (`/home/<user>/.minikube/profiles/minikube/client.crt`), not
 by a path relative to `$HOME`. Mounting `$HOME/.minikube` to
@@ -171,10 +198,12 @@ match, so every cert read fails.
 flatten the kubeconfig — `kubectl config view --minify --flatten` embeds
 all cert data directly into the kubeconfig as base64, so there's no
 external file path to get wrong:
+
 ```bash
 kubectl config view --minify --flatten > /tmp/argus-kubeconfig
 docker run ... -v "/tmp/argus-kubeconfig:/root/.kube/config:ro" ...
 ```
+
 No longer needs `.minikube` mounted at all. This is portable across any
 host username/home-directory layout, not just the machine it happened to
 be developed on.
@@ -220,12 +249,14 @@ elapsed-time cushion disappears — Step 5 could start seconds after
 SigNoz deploys, hitting the same race far more easily. Added an explicit
 wait for the OTLP port right before Step 5 starts, instead of relying on
 however long steps 2-4 happen to take:
+
 ```bash
 otlp_collector_ready() {
     (exec 3<>/dev/tcp/localhost/4317) 2>/dev/null
 }
 # polled in a loop immediately before the first scenario runs
 ```
+
 Also switched `signoz_fully_ready()`'s UI check from curling the root
 page to SigNoz's documented `/api/v1/health` endpoint, a more precise
 readiness signal.
