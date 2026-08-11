@@ -16,7 +16,7 @@ need. For a quick summary instead of this full walkthrough, see the
 
 ---
 
-## 0. Windows only — WSL2 :
+## 0. Windows only — WSL2:
 
 SigNoz's ClickHouse Keeper segfaults under Docker Desktop's virtualization
 layer on Windows. This project needs **native Docker Engine running inside
@@ -55,7 +55,7 @@ WSL2**, not Docker Desktop. macOS/Linux users: skip to step 1.
 See also [Installing SigNoz on Windows: the Fastest Way](https://medium.com/@mettasurendhar/installing-signoz-on-windows-the-fastest-way-5-minutes-no-docker-desktop-eb7c581ff246)
 for the condensed version of this exact path.
 
-## 1. Docker Engine :
+## 1. Docker Engine:
 
 ### If Docker is already installed
 
@@ -127,7 +127,7 @@ docker run hello-world
 
 If this prints the "Hello from Docker!" message, you're ready for step 2.
 
-## 2. minikube + kubectl :
+## 2. minikube + kubectl:
 
 ```bash
 # minikube
@@ -150,7 +150,7 @@ the cluster itself. If you want to sanity-check this step in isolation
 first: `minikube start --driver=docker`, then `minikube delete` when done
 so `setup.sh` starts clean.
 
-## 3. foundryctl :
+## 3. foundryctl:
 
 Deploys SigNoz.
 
@@ -161,7 +161,7 @@ curl -fsSL https://signoz.io/foundry.sh | bash
 Full docs / manual install (e.g. air-gapped environments):
 https://github.com/SigNoz/foundry/blob/main/docs/getting-started.md
 
-## 4. Get the repo running :
+## 4. Get the repo running:
 
 ```bash
 git clone <your-repo-url> argus
