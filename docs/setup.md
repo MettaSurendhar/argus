@@ -36,6 +36,20 @@ WSL2**, not Docker Desktop. macOS/Linux users: skip to step 1.
    reopen your WSL terminal for it to take effect.
 3. From here on, run **every command in this guide inside your WSL2 Ubuntu
    shell**, not PowerShell.
+4. **Put the project on WSL2's native filesystem, not `/mnt/c/...` or
+   `/mnt/d/...`.** Those paths are Windows drives mounted into WSL2, and
+   file I/O across that boundary is drastically slower than native disk —
+   badly enough that a `docker build` under that load has been observed to
+   crash the entire WSL2 VM mid-build (15+ minute `pip install`, then the
+   whole session dies with no error, see [`docs/faq.md`](faq.md)). Clone
+   or copy the project somewhere under your Linux home directory instead:
+   ```bash
+   mkdir -p ~/projects
+   git clone <your-repo-url> ~/projects/argus
+   cd ~/projects/argus
+   ```
+   `setup.sh` itself checks for this and warns loudly if it detects the
+   project running from `/mnt/...` under WSL2.
 
 See also [Installing SigNoz on Windows: the Fastest Way](https://medium.com/@mettasurendhar/installing-signoz-on-windows-the-fastest-way-5-minutes-no-docker-desktop-eb7c581ff246)
 for the condensed version of this exact path.
@@ -155,6 +169,10 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
+**Windows/WSL2:** run this from inside your WSL2 Ubuntu shell, in a
+directory under your Linux home (e.g. `~/projects/argus`) — not `/mnt/c/`
+or `/mnt/d/`. See step 0 above for why.
+
 `setup.sh` starts (or reuses) a minikube cluster, deploys SigNoz via
 Foundry, builds the agent's Docker image, builds the RAG index, then
 injects each of the 3 demo scenarios and runs the agent against them in
@@ -183,8 +201,8 @@ automatically once present, no other edits needed.
 
 ## Troubleshooting
 
-Real issues hit while testing this setup on an actual machine, and how
-they were resolved, are logged in
-[`docs/observations.md`](observations.md). Check there first if something
-in this guide doesn't go as expected — and if you hit something new,
-that's the place to add it too.
+Quick answers to the most likely errors are in
+[`docs/faq.md`](faq.md) — check there first. For the full detail on how
+each was actually diagnosed (useful if the quick fix doesn't match your
+situation exactly), see [`docs/observations.md`](observations.md). If you
+hit something new, that's the place to add it.

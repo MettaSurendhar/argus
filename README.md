@@ -64,12 +64,13 @@ argus/
 - Docker (native Docker Engine — **not** Docker Desktop on Windows, see below)
 - [minikube](https://minikube.sigs.k8s.io/docs/start/) + `kubectl`
 - [foundryctl](https://github.com/SigNoz/foundry/blob/main/docs/getting-started.md) (deploys SigNoz)
-- **Windows only:** run all of the above inside WSL2, not PowerShell — Docker Desktop's virtualization layer has a known SigNoz/ClickHouse Keeper crash bug on Windows.
+- **Windows only:** run all of the above inside WSL2, not PowerShell — Docker Desktop's virtualization layer has a known SigNoz/ClickHouse Keeper crash bug on Windows. Also keep the project on WSL2's **native filesystem** (e.g. `~/projects/argus`), not `/mnt/c/` or `/mnt/d/` — file I/O across that boundary is slow enough to crash the whole WSL2 VM mid-`docker build`. `setup.sh` checks for this and warns if it's detected.
 - Python 3.11+ — only needed for the "running things by hand" route below, not for `setup.sh` itself.
 
 Full step-by-step instructions, including WSL2 setup and what to do if
 Docker is already installed some other way, are in
-[`docs/setup.md`](docs/setup.md).
+[`docs/setup.md`](docs/setup.md). Hit an error? Check
+[`docs/faq.md`](docs/faq.md) first.
 
 ## Setup
 

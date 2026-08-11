@@ -37,6 +37,30 @@ echo "Requires: minikube, kubectl, foundryctl, and docker already installed"
 echo "on this host. See README.md 'Setup' if any of those are missing."
 echo ""
 
+# WSL2 + a project directory under /mnt/... (a Windows drive mounted into
+# WSL2) is a real problem, not just slow: file I/O across that boundary is
+# drastically slower than WSL2's native filesystem, and under a docker
+# build's sustained I/O load it can push the WSL2 VM over a resource
+# ceiling and get it killed by Windows mid-build (see docs/observations.md
+# #2 — that's exactly what happened during development). Warn loudly and
+# give a few seconds to Ctrl+C, but don't hard-block in case it's a false
+# positive or someone has a reason to proceed anyway.
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    case "$(pwd)" in
+        /mnt/*)
+            echo "⚠️  WARNING: running from $(pwd) — a Windows drive mounted"
+            echo "   into WSL2. This is known to cause severe slowdowns during"
+            echo "   docker build (15+ min pip installs) and can crash the WSL2"
+            echo "   VM entirely mid-build. Strongly recommended: move the"
+            echo "   project onto WSL2's native filesystem first:"
+            echo "     mkdir -p ~/projects && cp -r $(pwd) ~/projects/argus && cd ~/projects/argus"
+            echo "   See docs/faq.md for details. Continuing in 8s (Ctrl+C to stop)..."
+            sleep 8
+            echo ""
+            ;;
+    esac
+fi
+
 # --- 1. minikube ---
 banner "Step 1/5 — minikube"
 if minikube status > /dev/null 2>&1; then
