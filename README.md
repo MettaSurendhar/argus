@@ -61,21 +61,15 @@ argus/
 
 ## Prerequisites
 
-Everything below is a one-time host setup. Skip anything you already have.
+- Docker (native Docker Engine — **not** Docker Desktop on Windows, see below)
+- [minikube](https://minikube.sigs.k8s.io/docs/start/) + `kubectl`
+- [foundryctl](https://github.com/SigNoz/foundry/blob/main/docs/getting-started.md) (deploys SigNoz)
+- **Windows only:** run all of the above inside WSL2, not PowerShell — Docker Desktop's virtualization layer has a known SigNoz/ClickHouse Keeper crash bug on Windows.
+- Python 3.11+ — only needed for the "running things by hand" route below, not for `setup.sh` itself.
 
-**Windows only — WSL2 first.** SigNoz's ClickHouse Keeper segfaults under Docker Desktop's virtualization layer on Windows, so this project needs native Docker Engine running inside WSL2, not Docker Desktop. Install WSL2 via Microsoft's official guide: https://learn.microsoft.com/windows/wsl/install — then run everything below (Docker, minikube, foundryctl, this repo) *inside* your WSL2 Ubuntu shell, not PowerShell. See also [Installing SigNoz on Windows: the Fastest Way](https://medium.com/@mettasurendhar/installing-signoz-on-windows-the-fastest-way-5-minutes-no-docker-desktop-eb7c581ff246) for the condensed version of this exact path. macOS/Linux: skip this step.
-
-**Docker** — install per your OS: https://docs.docker.com/engine/install/
-
-**minikube** — https://minikube.sigs.k8s.io/docs/start/ (bundles/manages `kubectl` for you; if you don't already have `kubectl` separately, minikube's guide covers that too)
-
-**foundryctl** (deploys SigNoz):
-```bash
-curl -fsSL https://signoz.io/foundry.sh | bash
-```
-Full docs / manual install (e.g. air-gapped environments): https://github.com/SigNoz/foundry/blob/main/docs/getting-started.md
-
-**Python 3.11+** — only needed if you're going the "running things by hand" route below instead of `setup.sh`. `kubernetes-mcp-server` itself doesn't need a separate host install — it's baked into the agent's Docker image at build time.
+Full step-by-step instructions, including WSL2 setup and what to do if
+Docker is already installed some other way, are in
+[`docs/setup.md`](docs/setup.md).
 
 ## Setup
 
@@ -116,7 +110,7 @@ The 3 fixed failure scenarios, their runbooks, and how to run each individually 
 
 ## Dashboard
 
-<!-- Drop screenshots into docs/screenshots/ with these filenames and they'll render below as-is. -->
+<!-- Screenshots go in docs/screenshots/ — see docs/setup.md#5-screenshots for exactly what to capture and the filenames to use. -->
 
 ![Full dashboard, all 4 panels](docs/screenshots/dashboard-overview.png)
 
