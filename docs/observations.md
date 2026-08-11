@@ -142,3 +142,42 @@ passes `.env` straight into the container's environment, and
 needed.
 
 **Status:** ✅ resolved.
+
+---
+
+## 5. Step 5/5 fails: MCP server can't read minikube certs inside container
+
+**Symptom:**
+```
+Error: unable to create kubernetes target provider: failed to create kubernetes rest config from kubeconfig: invalid configuration: [unable to read client-cert /home/metta-unix/.minikube/profiles/minikube/client.crt for minikube due to open /home/metta-unix/.minikube/profiles/minikube/client.crt: no such file or directory, ...]
+```
+followed by an `mcp.shared.exceptions.MCPError: Connection closed`.
+
+**Cause:** A real bug in `setup.sh`'s `run_agent()`, not a host/environment
+issue. It mounted:
+```bash
+-v "$HOME/.kube:/root/.kube:ro" \
+-v "$HOME/.minikube:/root/.minikube:ro" \
+```
+But minikube's generated kubeconfig references cert files by **absolute
+host path** (`/home/<user>/.minikube/profiles/minikube/client.crt`), not
+by a path relative to `$HOME`. Mounting `$HOME/.minikube` to
+`/root/.minikube` creates that path inside the container, but the
+kubeconfig still points at `/home/<user>/.minikube/...`, which was never
+mounted anywhere — the file reference and the actual mount point don't
+match, so every cert read fails.
+
+**Fix:** Stopped relying on matching host/container paths at all. Instead,
+flatten the kubeconfig — `kubectl config view --minify --flatten` embeds
+all cert data directly into the kubeconfig as base64, so there's no
+external file path to get wrong:
+```bash
+kubectl config view --minify --flatten > /tmp/argus-kubeconfig
+docker run ... -v "/tmp/argus-kubeconfig:/root/.kube/config:ro" ...
+```
+No longer needs `.minikube` mounted at all. This is portable across any
+host username/home-directory layout, not just the machine it happened to
+be developed on.
+
+**Status:** ⏳ pending confirmation — re-run `./setup.sh` and update this
+entry with the result.

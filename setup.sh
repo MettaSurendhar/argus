@@ -85,11 +85,17 @@ docker run --rm \
 banner "Step 5/5 — running the 3 demo scenarios"
 
 run_agent() {
+    # minikube's kubeconfig references cert files by absolute host path
+    # (e.g. /home/<user>/.minikube/...), which won't exist inside the
+    # container even with .minikube mounted at /root/.minikube — the path
+    # in the file and the mount point don't match. Flattening embeds the
+    # cert data directly into the kubeconfig (base64), sidestepping the
+    # mismatch entirely.
+    kubectl config view --minify --flatten > /tmp/argus-kubeconfig
     docker run --rm \
         --network host \
         -v "$(pwd)/chroma_db:/app/chroma_db" \
-        -v "$HOME/.kube:/root/.kube:ro" \
-        -v "$HOME/.minikube:/root/.minikube:ro" \
+        -v "/tmp/argus-kubeconfig:/root/.kube/config:ro" \
         --env-file .env \
         --entrypoint python \
         argus -m instrumentation.main "$@"
