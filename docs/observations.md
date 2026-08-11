@@ -181,3 +181,29 @@ be developed on.
 
 **Status:** ⏳ pending confirmation — re-run `./setup.sh` and update this
 entry with the result.
+
+---
+
+## 6. Traces not visible in SigNoz UI on the very first run (benign)
+
+**Symptom:** After the first-ever successful `./setup.sh` run against a
+freshly deployed SigNoz instance, no traces/services showed up in the UI
+on first login. Re-running the scenarios a second time, traces appeared
+normally.
+
+**Investigated:** Checked whether `BatchSpanProcessor` spans were being
+dropped on process exit (the classic cause) — they aren't:
+`instrumentation/main.py` calls `flush()` →
+`provider.force_flush()` in a `finally` block after every `diagnose()`
+call, so spans are always pushed out before the CLI process exits. Code
+is correct.
+
+**Likely cause:** Cold-start propagation delay on a freshly created
+ClickHouse schema (`foundryctl cast` had just deployed SigNoz moments
+before). Newly-seen-service detection in the UI appears to lag slightly
+behind the first-ever write on a brand new stack; by the second run the
+pipeline had already warmed up and new spans appeared immediately.
+
+**Status:** ✅ not a bug — benign one-time cold start, no fix needed.
+Note it if it happens again on a fresh deploy: just wait ~30s–1min and
+refresh, or run a scenario a second time.
