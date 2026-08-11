@@ -96,3 +96,28 @@ WSL2 VM hit a resource ceiling and was killed/reset by Windows.
 
 **Status:** ⏳ pending confirmation — re-run `./setup.sh` from the native
 filesystem path and update this entry with the result.
+
+---
+
+## 3. Step 4/5 fails: `docker: --env-file: open .env: no such file or directory`
+
+**Environment:** WSL2, project moved to `~/projects/argus` (native
+filesystem, per issue #2's fix)
+
+**Cause:** No `.env` file in the project root. `docker build` (Step 3)
+doesn't read `.env` at all, so a missing `.env` doesn't surface until
+Step 4, the first step that actually runs `docker run --env-file .env
+...`. In this case the project directory had been freshly copied
+(`cp -r ... ~/projects/argus`) without `.env` ever having been created
+in it — an easy step to skip when moving/re-cloning the project.
+
+**Fix:**
+```bash
+cp .env.example .env
+# fill in GROQ_API_KEY (or OPENROUTER_API_KEY) in .env
+./setup.sh
+```
+Re-running is cheap once minikube/SigNoz/the Docker image are already up —
+`setup.sh` skips straight to Step 4.
+
+**Status:** ⏳ pending confirmation.
