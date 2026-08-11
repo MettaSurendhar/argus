@@ -136,6 +136,13 @@ python -m instrumentation.main "why is this pod crashing" default my-oom-pod
 - Scored results across 3 LLM providers: [`docs/manual_eval.md`](docs/manual_eval.md)
 - Raw run logs backing those scores: [`docs/run_observation.md`](docs/run_observation.md)
 
+## After setup
+
+- `setup.sh` only runs the 3 fixed scenarios automatically
+- To ask your own questions against your own pods, or build the
+  dashboard/alerts yourself (neither is auto-created — nothing to
+  import), see [`docs/usage.md`](docs/usage.md)
+
 ## Dashboard
 
 ![Full dashboard, all 4 panels](docs/screenshots/dashboard-overview.png)
