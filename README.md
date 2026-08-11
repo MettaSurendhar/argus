@@ -13,33 +13,49 @@ I wrote about this gap directly in [AI Agents Aren't Ready for IT Operations Yet
 ## Architecture
 
 ```
- Question -------------------> Planner
-                                   |
-                 -------------------------------------
-                 |                |                   |
-                 v                v                   v
-           Retriever      MCP Tool Client        (both feed into)
-        (Chroma vector    (kubernetes-mcp-             |
-         store, runbook    server, read-only)          |
-         chunks)                |                      |
-                 |                v                     |
-                 |          Live pod state,              |
-                 |          logs                          |
-                 -------------------------------------
-                                   |
-                                   v
-                             LLM synthesis
-                        (hypothesis + confidence
-                          + cited sources)
-                                   |
-                                   v
-                               Answer
+                          ┌───────────────────────────┐
+                          │         Question          │
+                          └─────────────┬─────────────┘
+                                        │
+                                        ▼
+                          ┌───────────────────────────┐
+                          │          Planner          │
+                          └─────────────┬─────────────┘
+                                        │
+                      ┌─────────────────┴──────────────────┐
+                      │                                    │
+                      ▼                                    ▼
+        ┌───────────────────────────┐        ┌────────────────────────────┐
+        │         Retriever         │        │      MCP Tool Client       │
+        │ --------------------------│        │----------------------------│
+        │   Chroma vector store,    │        │   kubernetes-mcp-server,   │
+        │     runbook chunks        │        │        read-only           │
+        └─────────────┬─────────────┘        └─────────────┬──────────────┘
+                      │                                    │
+                      │                                    ▼
+                      │                     ┌──────────────────────────┐
+                      │                     │   Live pod state, logs   │
+                      │                     └──────────────┬───────────┘
+                      │                                    │
+                      └──────────────────┬─────────────────┘
+                                         │
+                                         ▼
+                          ┌───────────────────────────┐
+                          │       LLM synthesis       │
+                          │  hypothesis + confidence  │
+                          │      + cited sources      │
+                          └─────────────┬─────────────┘
+                                        │
+                                        ▼
+                          ┌─────────────────────────┐
+                          │          Answer         │
+                          └─────────────────────────┘
 
- ------------------------------------------------------------
- Every step above is wrapped in an OTel span and exported to
- SigNoz: retrieve_runbooks -> k8s_describe_pod -> k8s_get_logs
- -> llm_call, all nested under one root "diagnose" span.
- ------------------------------------------------------------
+ ──────────────────────────────────────────────────────────────────
+ Every step above is wrapped in an OTel span and exported to SigNoz:
+ retrieve_runbooks → k8s_describe_pod → k8s_get_logs → llm_call,
+ all nested under one root "diagnose" span.
+ ──────────────────────────────────────────────────────────────────
 ```
 
 ## Folder structure
