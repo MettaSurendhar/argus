@@ -207,3 +207,25 @@ pipeline had already warmed up and new spans appeared immediately.
 **Status:** ✅ not a bug — benign one-time cold start, no fix needed.
 Note it if it happens again on a fresh deploy: just wait ~30s–1min and
 refresh, or run a scenario a second time.
+
+**Follow-up fix (proactive, not confirmed to have been strictly
+necessary for what was observed above, but closes a real race):**
+`signoz_fully_ready()` only checked the UI/query-service and ClickHouse
+Keeper — not the OTLP collector on port 4317, which is what spans are
+actually sent to. On the run above, ~20+ minutes elapsed between SigNoz
+coming up and Step 5 starting (slow first-time `docker build` + `pip
+install`), which incidentally gave the collector plenty of time to warm
+up. On a **cached re-run** (image + RAG index already built), that
+elapsed-time cushion disappears — Step 5 could start seconds after
+SigNoz deploys, hitting the same race far more easily. Added an explicit
+wait for the OTLP port right before Step 5 starts, instead of relying on
+however long steps 2-4 happen to take:
+```bash
+otlp_collector_ready() {
+    (exec 3<>/dev/tcp/localhost/4317) 2>/dev/null
+}
+# polled in a loop immediately before the first scenario runs
+```
+Also switched `signoz_fully_ready()`'s UI check from curling the root
+page to SigNoz's documented `/api/v1/health` endpoint, a more precise
+readiness signal.

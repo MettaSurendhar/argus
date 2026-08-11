@@ -13,10 +13,16 @@ banner() {
 }
 
 signoz_fully_ready() {
-    curl -sf http://localhost:8080 > /dev/null 2>&1 || return 1
+    curl -sf http://localhost:8080/api/v1/health > /dev/null 2>&1 || return 1
     local ch_status
     ch_status=$(docker inspect --format='{{.State.Health.Status}}' signoz-telemetrykeeper-clickhousekeeper-0 2>/dev/null || echo "missing")
     [ "$ch_status" = "healthy" ]
+}
+
+otlp_collector_ready() {
+    # spans get sent here (gRPC, not HTTP — a plain TCP connect is enough
+    # to confirm something's actually listening before we start exporting)
+    (exec 3<>/dev/tcp/localhost/4317) 2>/dev/null
 }
 
 banner "Argus — setup"
@@ -83,6 +89,24 @@ docker run --rm \
 
 # --- 5. Inject scenarios and run the agent, one at a time ---
 banner "Step 5/5 — running the 3 demo scenarios"
+
+# Steps 2-4 can take 20+ minutes on a first run (plenty of warm-up time for
+# SigNoz), or just seconds on a cached re-run — don't rely on elapsed time.
+# Confirm the OTLP collector is actually accepting connections right before
+# spans start flowing, so traces don't silently go missing on a fast run.
+echo "Confirming SigNoz's OTLP collector is ready to receive traces..."
+for i in $(seq 1 30); do
+    if otlp_collector_ready; then
+        echo "OTLP collector is up."
+        break
+    fi
+    sleep 2
+done
+if ! otlp_collector_ready; then
+    echo "Warning: OTLP collector on localhost:4317 isn't responding after"
+    echo "60s. Scenarios will still run, but traces may not show up in"
+    echo "SigNoz for this run — check docs/observations.md."
+fi
 
 run_agent() {
     # minikube's kubeconfig references cert files by absolute host path
