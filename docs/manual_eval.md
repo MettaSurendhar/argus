@@ -1,8 +1,5 @@
 # Manual Evaluation Log
 
-Fill this in by hand as you run each scenario. This becomes your v1 baseline,
-and later the seed data for the ablation study in RESEARCH_PAPER_GUIDE.md section 4.2.
-
 Raw terminal output for each run below is preserved in `run_observation.md` as
 proof-of-run evidence.
 
